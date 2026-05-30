@@ -12,11 +12,13 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+       stage('Checkout') {
+    steps {
+        deleteDir()
+        git branch: 'main',
+            url: 'https://github.com/vikashsum/BlueGreen-Deployment.git'
+    }
+}
 
         stage('Build Docker Image') {
             steps {
