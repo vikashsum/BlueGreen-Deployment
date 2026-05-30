@@ -6,7 +6,7 @@ pipeline {
         CLUSTER_NAME = 'bluegreen-eks'
         NAMESPACE = 'production'
 
-        DOCKER_IMAGE = 'vikash3117'/sample-app'
+        DOCKER_IMAGE = 'vikash3117/sample-app'
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
