@@ -19,6 +19,17 @@ pipeline {
             url: 'https://github.com/vikashsum/BlueGreen-Deployment.git'
     }
 }
+        stage('Checkout Code') {
+    steps {
+        deleteDir()
+
+        git branch: 'main',
+            url: 'https://github.com/vikashsum/BlueGreen-Deployment.git'
+
+        sh 'git reset --hard'
+        sh 'git clean -fdx'
+    }
+}
 
         stage('Build Docker Image') {
             steps {
