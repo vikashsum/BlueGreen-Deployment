@@ -14,9 +14,10 @@ pipeline {
 
        stage('Checkout') {
     steps {
-        deleteDir()
-        git branch: 'main',
-            url: 'https://github.com/vikashsum/BlueGreen-Deployment.git'
+        cleanWs()
+        git url: 'https://github.com/vikashsum/BlueGreen-Deployment.git', branch: 'main'
+    }
+}
     }
 }
         stage('Checkout Code') {
