@@ -173,8 +173,9 @@ EOF
 
         stage('Verify Deployment') {
             steps {
-                sh """
-                kubectl rollout status deployment/app-green -n ${NAMESPACE}
+                sh '''
+                   kubectl rollout status deployment/app-green -n production --timeout=300s
+                     '''
 
                 kubectl get pods -n ${NAMESPACE}
 
@@ -192,5 +193,12 @@ EOF
         failure {
             echo 'Pipeline failed'
         }
+    }
+}
+post {
+    failure {
+        sh 'kubectl get pods -n production'
+        sh 'kubectl describe deployment app-green -n production'
+        sh 'kubectl get events -n production --sort-by=.metadata.creationTimestamp'
     }
 }
