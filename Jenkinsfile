@@ -2,20 +2,19 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = "ap-south-1"
-        CLUSTER_NAME = "bluegreen-eks"
-        NAMESPACE = "production"
+        AWS_REGION = 'ap-south-1'
+        CLUSTER_NAME = 'bluegreen-eks'
+        NAMESPACE = 'production'
 
-        DOCKER_IMAGE = "yourdockerhubuser/sample-app"
+        DOCKER_IMAGE = 'vikash3117'/sample-app'
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git branch: 'main',
-                url: 'https://github.com/your-org/sample-app.git'
+                checkout scm
             }
         }
 
@@ -27,7 +26,7 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Docker Login') {
             steps {
                 withCredentials([
                     usernamePassword(
@@ -36,24 +35,26 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-
                     sh """
                     echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-
-                    docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
-
-                    docker logout
                     """
                 }
             }
         }
 
+        stage('Push Docker Image') {
+            steps {
+                sh """
+                docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
+                """
+            }
+        }
+
         stage('Create EKS Cluster') {
             steps {
-
                 withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds']
+                     credentialsId: 'aws-creds']
                 ]) {
 
                     sh """
@@ -75,10 +76,9 @@ pipeline {
 
         stage('Configure kubectl') {
             steps {
-
                 withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds']
+                     credentialsId: 'aws-creds']
                 ]) {
 
                     sh """
@@ -95,14 +95,14 @@ pipeline {
         stage('Create Namespace') {
             steps {
                 sh """
-                kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+                kubectl create namespace ${NAMESPACE} \
+                --dry-run=client -o yaml | kubectl apply -f -
                 """
             }
         }
 
         stage('Deploy Green Version') {
             steps {
-
                 sh """
 cat <<EOF | kubectl apply -f -
 
@@ -134,6 +134,20 @@ spec:
         ports:
         - containerPort: 8080
 
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+
 ---
 apiVersion: v1
 kind: Service
@@ -150,14 +164,15 @@ spec:
   - port: 80
     targetPort: 8080
 
+  type: LoadBalancer
+
 EOF
                 """
             }
         }
 
-        stage('Validate Deployment') {
+        stage('Verify Deployment') {
             steps {
-
                 sh """
                 kubectl rollout status deployment/app-green -n ${NAMESPACE}
 
@@ -167,27 +182,15 @@ EOF
                 """
             }
         }
-
-        stage('Delete Blue Deployment') {
-            steps {
-
-                sh """
-                kubectl delete deployment app-blue \
-                -n ${NAMESPACE} \
-                --ignore-not-found=true
-                """
-            }
-        }
     }
 
     post {
-
         success {
-            echo "Blue-Green deployment completed successfully"
+            echo 'Blue-Green deployment successful'
         }
 
         failure {
-            echo "Deployment failed"
+            echo 'Pipeline failed'
         }
     }
 }
